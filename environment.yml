@@ -1,0 +1,6 @@
+name: lme2_pysdk
+channels:
+  - conda-forge
+dependencies:
+  - requests
+prefix: /root/conda/envs/lme2_pysdk
