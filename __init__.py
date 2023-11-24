@@ -5,7 +5,7 @@ class Atom(TypedDict):
     element: int
     position: list[float, float, float]
 
-type Atoms = dict[int, Atom | None]
+Atoms = dict[int, Atom | None]
 
 class Bonds(TypedDict):
     indexes: list[tuple[int, int]]
@@ -15,11 +15,12 @@ class Molecule(TypedDict):
     atoms: Atoms
     bonds: Bonds
 
-type CleanedMolecule = tuple[list[Atom], dict[tuple[int, int], float]]
+CleanedMolecule = tuple[list[Atom], dict[tuple[int, int], float]]
 
 class AddSubstitute(TypedDict):
     atoms: list[Atom]
-    bond: dict[tuple[int, int], float]
+    bonds_idxs: list[tuple[int, int]]
+    bonds_values: list[float]
     current: tuple[int, int]
     target: tuple[int, int]
     class_name: str | None
@@ -29,8 +30,13 @@ class Workspace:
         self.__name__ = name
         self.__session__ = aiohttp.ClientSession(f"{server}")
 
-    def __request__(self, method: str, path: str, **kargs):
-        return self.__session__.request(method, f"/workspaces/{self.__name__}{path}", **kargs)
+    async def __request__(self, method: str, path: str, **kargs):
+        resp = await self.__session__.request(method, f"/workspaces/{self.__name__}{path}", **kargs)
+        if resp.ok:
+            return resp
+        else:
+            print(resp.status)
+            raise RuntimeError(await resp.text())
 
     async def create(self):
         resp = await self.__request__("post", "", data="null", headers = {"Content-Type": "application/json"})
@@ -100,7 +106,7 @@ class Workspace:
         return resp.ok
     
     async def add_substitute(self, stack_idx: int, add_substitute: AddSubstitute) -> bool:
-        resp = await self.__request__("post", f"/stacks/{stack_idx}/subsitute", data=add_substitute, headers={"Content-Type": "application/json"})
+        resp = await self.__request__("post", f"/stacks/{stack_idx}/substitute", json=add_substitute, headers={"Content-Type": "application/json"})
         return resp.ok
     
     async def get_atom_by_id(self, stack_idx: int, name: str) -> int:
