@@ -67,10 +67,10 @@ class Workspace:
         resp = await self.__request__("patch", f"/stacks/{stack_idx}", json=(atoms, bonds))
         return resp.ok
     
-    async def overlay_fill_layer(self, stack_idx: int) -> bool:
-        resp = await self.__request__("put", f"/stacks/{stack_idx}", json={
-            "Fill": {}
-        })
+    async def overlay_fill_layer(self, stacks_idxs: list[int]) -> bool:
+        resp = await self.__request__("put", f"/stacks/overlay_to", json=[
+            {"Fill": {}}, stacks_idxs
+        ])
         return resp.ok
 
     async def remove_stack(self, stack_idx: int) -> bool:
@@ -83,11 +83,11 @@ class Workspace:
     async def cleaned_molecule(self, stack_idx: int) -> tuple[list[Atom], dict[tuple[int, int], float]]:
         return await (await self.__request__("get", f"/stacks/{stack_idx}/cleaned")).json()
 
-    async def clone_stack(self, stack_idx: int) -> int:
-        return await (await self.__request__("post", f"/stacks/{stack_idx}/clone_stack")).json()
+    async def clone_stack(self, stack_idx: int, amount: int = 1) -> int:
+        return await (await self.__request__("post", f"/stacks/{stack_idx}/clone_stack", json={"amount": amount})).json()
     
-    async def clone_base(self, stack_idx: int) -> int:
-        return await (await self.__request__("post", f"/stacks/{stack_idx}/clone_base")).json()
+    async def clone_base(self, stack_idx: int, amount: int = 1) -> int:
+        return await (await self.__request__("post", f"/stacks/{stack_idx}/clone_base", json={"amount": amount})).json()
 
     async def rotation_group(self, stack_idx: int, class_name: str, center: tuple[float, float, float], axis: tuple[float, float, float], angle: float) -> bool:
         resp = await self.__request__("put", f"/stacks/{stack_idx}/rotation/class/{class_name}", data=(center, axis, angle), headers={"Content-Type": "application/json"})
