@@ -1,3 +1,4 @@
+import json
 from typing import TypedDict
 import aiohttp
 
@@ -38,18 +39,20 @@ class Workspace:
             print(resp.status)
             raise RuntimeError(await resp.text())
 
-    async def create(self):
-        resp = await self.__request__("post", "", data="null", headers = {"Content-Type": "application/json"})
+    async def create(self, load = None):
+        resp = await self.__request__("post", "", data=json.dumps(load), headers = {"Content-Type": "application/json"})
         if not resp.ok:
             raise RuntimeError(await resp.text())
 
     async def remove(self):
         resp = await self.__request__("delete", "")
         if resp.ok:
-            content = await resp.text()
-            await self.__session__.close()
+            await resp.text()
         else:
             raise RuntimeError(f"Failed to remove target workspace: {await resp.text()}")
+        
+    async def close(self):
+        await self.__session__.close()
 
     async def export(self):
         return await (await self.__request__("get", "/export")).json()
