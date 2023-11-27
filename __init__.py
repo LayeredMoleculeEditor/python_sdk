@@ -16,7 +16,9 @@ class Molecule(TypedDict):
     atoms: Atoms
     bonds: Bonds
 
-CleanedMolecule = tuple[list[Atom], dict[tuple[int, int], float]]
+CleanedMolecule = (
+    list[Atom], list[tuple[int, int]], list[float]
+)
 
 class AddSubstitute(TypedDict):
     atoms: list[Atom]
@@ -104,8 +106,8 @@ class Workspace:
         resp = await self.__request__("get", f"/stacks/{stack_idx}/atom/{atom_idx}/neighbor")
         return await resp.json()
     
-    async def import_structure(self, stack_idx: int, structure: CleanedMolecule) -> bool:
-        resp = await self.__request__("post", f"/stacks/{stack_idx}/import", data=structure, headers={"Content-Type": "applcation/json"})
+    async def import_structure(self, stack_idx: int, structure: CleanedMolecule, name: str) -> bool:
+        resp = await self.__request__("post", f"/stacks/{stack_idx}/import/{name}", json=structure, headers={"Content-Type": "application/json"})
         return resp.ok
     
     async def add_substitute(self, stack_idx: int, add_substitute: AddSubstitute) -> bool:
