@@ -31,7 +31,7 @@ class AddSubstitute(TypedDict):
 class Workspace:
     def __init__(self, server: str, name: str) -> None:
         self.__name__ = name
-        self.__session__ = aiohttp.ClientSession(f"{server}")
+        self.__session__ = aiohttp.ClientSession(server)
 
     async def __request__(self, method: str, path: str, **kargs):
         resp = await self.__session__.request(method, f"/workspaces/{self.__name__}{path}", **kargs)
