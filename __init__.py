@@ -77,6 +77,11 @@ class Workspace:
             {"Fill": {}}, stacks_idxs
         ])
         return resp.ok
+    
+    async def overlay_layer(self, stacks_idxs: list[int], layer) -> bool:
+        resp = await self.__request__("put", f"/stacks/overlay_to", json=[
+            layer, stacks_idxs
+        ])
 
     async def remove_stack(self, stack_idx: int) -> bool:
         resp = await self.__request__("delete", f"/stacks/{stack_idx}")
