@@ -4,7 +4,7 @@ import aiohttp
 
 class Atom(TypedDict):
     element: int
-    position: list[float, float, float]
+    position: tuple[float, float, float]
 
 Atoms = dict[int, Atom | None]
 
@@ -16,14 +16,13 @@ class Molecule(TypedDict):
     atoms: Atoms
     bonds: Bonds
 
-CleanedMolecule = (
-    list[Atom], list[tuple[int, int]], list[float]
-)
-
-class AddSubstitute(TypedDict):
+class CleanedMolecule(TypedDict):
     atoms: list[Atom]
     bonds_idxs: list[tuple[int, int]]
     bonds_values: list[float]
+
+class AddSubstitute(TypedDict):
+    structure: CleanedMolecule
     current: tuple[int, int]
     target: tuple[int, int]
     class_name: str | None
@@ -78,14 +77,13 @@ class Workspace:
         ])
         return resp.ok
     
-    async def overlay_layer(self, stacks_idxs: list[int], layer) -> bool:
-        resp = await self.__request__("put", f"/stacks/overlay_to", json=[
+    async def overlay_layer(self, stacks_idxs: list[int], layer):
+        await self.__request__("put", f"/stacks/overlay_to", json=[
             layer, stacks_idxs
         ])
 
-    async def remove_stack(self, stack_idx: int) -> bool:
-        resp = await self.__request__("delete", f"/stacks/{stack_idx}")
-        return resp.ok
+    async def remove_stack(self, stack_idx: int):
+        await self.__request__("delete", f"/stacks/{stack_idx}")
 
     async def is_stack_writable(self, stack_idx: int) -> bool:
         return await (await self.__request__("get", f"/stacks/{stack_idx}/writable")).json()
@@ -103,9 +101,8 @@ class Workspace:
         resp = await self.__request__("put", f"/stacks/{stack_idx}/rotation/class/{class_name}", data=(center, axis, angle), headers={"Content-Type": "application/json"})
         return resp.ok
     
-    async def rotation_group(self, stack_idx: int, class_name: str, vector: [float, float, float]) -> bool:
-        resp = await self.__request__("put", f"/stacks/{stack_idx}/translation/class/{class_name}", data=vector, headers={"Content-Type": "application/json"})
-        return resp.ok
+    async def translation_group(self, stack_idx: int, class_name: str, vector: tuple[float, float, float]):
+        await self.__request__("put", f"/stacks/{stack_idx}/translation/class/{class_name}", data=vector, headers={"Content-Type": "application/json"})
     
     async def get_neighbors(self, stack_idx: int, atom_idx: int) -> list[tuple[int, float]]:
         resp = await self.__request__("get", f"/stacks/{stack_idx}/atom/{atom_idx}/neighbor")
