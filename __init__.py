@@ -1,27 +1,28 @@
 import json
 from typing import TypedDict
 import aiohttp
+from pydantic import BaseModel
 
-class Atom(TypedDict):
+class Atom(BaseModel):
     element: int
     position: tuple[float, float, float]
 
 Atoms = dict[int, Atom | None]
 
-class Bonds(TypedDict):
+class Bonds(BaseModel):
     indexes: list[tuple[int, int]]
     values: list[float | None]
 
-class Molecule(TypedDict):
+class Molecule(BaseModel):
     atoms: Atoms
     bonds: Bonds
 
-class CleanedMolecule(TypedDict):
+class CleanedMolecule(BaseModel):
     atoms: list[Atom]
     bonds_idxs: list[tuple[int, int]]
     bonds_values: list[float]
 
-class AddSubstitute(TypedDict):
+class AddSubstitute(BaseModel):
     structure: CleanedMolecule
     current: tuple[int, int]
     target: tuple[int, int]
