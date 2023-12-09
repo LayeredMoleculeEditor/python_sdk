@@ -91,7 +91,7 @@ class Workspace:
     async def cleaned_molecule(self, stack_idx: int) -> tuple[list[Atom], dict[tuple[int, int], float]]:
         return await (await self.__request__("get", f"/stacks/{stack_idx}/cleaned")).json()
 
-    async def clone_stack(self, stack_idx: int, amount: int = 1) -> int:
+    async def clone_stack(self, stack_idx: int, amount: int = 1) -> tuple[int, int]:
         return await (await self.__request__("post", f"/stacks/{stack_idx}/clone_stack", json={"amount": amount})).json()
     
     async def clone_base(self, stack_idx: int, amount: int = 1) -> int:
