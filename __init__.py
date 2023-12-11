@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, Tuple, List, Dict
 import aiohttp
 from pydantic import BaseModel
 
@@ -7,15 +7,15 @@ JSON_REQUEST_HEADER = {"Content-Type": "application/json"}
 
 class Atom(BaseModel):
     element: int
-    position: tuple[float, float, float]
+    position: Tuple[float, float, float]
 
 
-Atoms = dict[int, Atom | None]
+Atoms = Dict[int, Atom | None]
 
 
 class Bonds(BaseModel):
-    indexes: list[tuple[int, int]]
-    values: list[float | None]
+    indexes: List[Tuple[int, int]]
+    values: List[float | None]
 
 
 class Molecule(BaseModel):
@@ -24,17 +24,27 @@ class Molecule(BaseModel):
 
 
 class CleanedMolecule(BaseModel):
-    atoms: list[Atom]
-    bonds_idxs: list[tuple[int, int]]
-    bonds_values: list[float]
+    atoms: List[Atom]
+    bonds_idxs: List[Tuple[int, int]]
+    bonds_values: List[float]
 
 
 class AddSubstitute(BaseModel):
     structure: CleanedMolecule
-    current: tuple[int, int]
-    target: tuple[int, int]
-    class_name: str | None
+    current: Tuple[int, int]
+    target: Tuple[int, int]
+    class_name: str
 
+class CloneResult(BaseModel):
+    value: Tuple[int, int]
+
+    @property
+    def start(self) -> int:
+        self.value[0]
+
+    @property
+    def end(self) -> int:
+        self.value[1]
 
 class Workspace:
     def __init__(self, server: str, name: str) -> None:
@@ -43,7 +53,7 @@ class Workspace:
 
     async def __request__(self, method: str, path: str, **kargs: Any):
         resp = await self.__session__.request(
-            method, f"/workspaces/{self.__name__}{path}", **kargs
+            method, f"/ws/{self.__name__}{path}", **kargs
         )
         if resp.ok:
             return resp
@@ -74,7 +84,7 @@ class Workspace:
         resp = await self.__request__("get", "/export")
         return await resp.text()
 
-    async def get_stacks(self) -> list[int]:
+    async def get_stacks(self) -> List[int]:
         resp = await self.__request__("get", "/stacks")
         return await resp.json()
 
@@ -94,12 +104,12 @@ class Workspace:
             headers=JSON_REQUEST_HEADER,
         )
 
-    async def overlay_fill_layer(self, stacks_idxs: list[int]) -> None:
+    async def overlay_fill_layer(self, stacks_idxs: List[int]) -> None:
         await self.__request__(
             "put", f"/stacks/overlay_to", json=[{"Fill": {}}, stacks_idxs]
         )
 
-    async def overlay_layer(self, stacks_idxs: list[int], layer: Any) -> None:
+    async def overlay_layer(self, stacks_idxs: List[int], layer: Any) -> None:
         await self.__request__("put", f"/stacks/overlay_to", json=[layer, stacks_idxs])
 
     async def remove_stack(self, stack_idx: int):
@@ -111,40 +121,42 @@ class Workspace:
 
     async def cleaned_molecule(
         self, stack_idx: int
-    ) -> tuple[list[Atom], dict[tuple[int, int], float]]:
+    ) -> CleanedMolecule:
         resp = await self.__request__("get", f"/stacks/{stack_idx}/cleaned")
-        return await resp.json()
+        data = await resp.text()
+        return CleanedMolecule.model_validate_json(data)
 
-    async def clone_stack(self, stack_idx: int, amount: int = 1) -> tuple[int, int]:
+    async def clone_stack(self, stack_idx: int, amount: int = 1) -> CloneResult:
         resp = await self.__request__(
             "post", f"/stacks/{stack_idx}/clone_stack", json={"amount": amount}
         )
-        return await resp.json()
+        data = await resp.text()
+        return CloneResult.model_validate_json(data)
 
-    async def clone_base(self, stack_idx: int, amount: int = 1) -> int:
+    async def clone_base(self, stack_idx: int, amount: int = 1) -> CloneResult:
         resp = await self.__request__(
             "post", f"/stacks/{stack_idx}/clone_base", json={"amount": amount}
         )
-        return await resp.json()
+        data = await resp.text()
+        return CloneResult.model_validate_json(data)
 
     async def rotation_group(
         self,
         stack_idx: int,
         class_name: str,
-        center: tuple[float, float, float],
-        axis: tuple[float, float, float],
+        center: Tuple[float, float, float],
+        axis: Tuple[float, float, float],
         angle: float,
-    ) -> bool:
-        resp = await self.__request__(
+    ):
+        await self.__request__(
             "put",
             f"/stacks/{stack_idx}/rotation/class/{class_name}",
             data=(center, axis, angle),
             headers={"Content-Type": "application/json"},
         )
-        return resp.ok
 
     async def translation_group(
-        self, stack_idx: int, class_name: str, vector: tuple[float, float, float]
+        self, stack_idx: int, class_name: str, vector: Tuple[float, float, float]
     ):
         await self.__request__(
             "put",
@@ -155,7 +167,7 @@ class Workspace:
 
     async def get_neighbors(
         self, stack_idx: int, atom_idx: int
-    ) -> list[tuple[int, float]]:
+    ) -> List[Tuple[int, float]]:
         resp = await self.__request__(
             "get", f"/stacks/{stack_idx}/atom/{atom_idx}/neighbor"
         )
@@ -187,13 +199,13 @@ class Workspace:
         resp = await self.__request__("get", f"/namespace/id/{name}/stack/{stack_idx}")
         return await resp.json()
 
-    async def get_atoms_by_class(self, stack_idx: int, name: str) -> list[int]:
+    async def get_atoms_by_class(self, stack_idx: int, name: str) -> List[int]:
         resp = await self.__request__(
             "get", f"/namespace/class/{name}/stack/{stack_idx}"
         )
         return await resp.json()
 
-    async def get_ids(self) -> list[str]:
+    async def get_ids(self) -> List[str]:
         resp = await self.__request__("get", f"/namespace/id")
         return await resp.json()
 
@@ -214,11 +226,11 @@ class Workspace:
         resp = await self.__request__("get", f"/namespace/id/atom/{atom_idx}")
         return await resp.json()
 
-    async def get_classes(self) -> list[str]:
+    async def get_classes(self) -> List[str]:
         resp = await self.__request__("get", f"/namespace/class")
         return await resp.json()
 
-    async def set_classes(self, atoms_idxs: list[int], name: str) -> bool:
+    async def set_classes(self, atoms_idxs: List[int], name: str) -> bool:
         resp = await self.__request__(
             "post",
             f"/namespace/class",
@@ -233,7 +245,7 @@ class Workspace:
         )
         return resp.ok
 
-    async def get_atom_classes(self, atom_idx: int) -> list[str]:
+    async def get_atom_classes(self, atom_idx: int) -> List[str]:
         resp = await self.__request__("get", f"/namespace/class/atom/{atom_idx}")
         return await resp.json()
 
